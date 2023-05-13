@@ -28,17 +28,36 @@ func runCase(in *bufio.Reader, out *bufio.Writer) {
 	input := make([]map[int]struct{}, n)
 
 	for i := 0; i < n; i++ {
-		s, _ := in.ReadString('\n')
+		s, _ := Readln(in)
+
 		s = strings.Trim(s, "\n")
 		syms := strings.Split(s, " ")
 		nums := make(map[int]struct{})
-
 		for _, d := range syms {
 			dd, _ := strconv.Atoi(d)
 			nums[dd] = struct{}{}
 		}
 		input[i] = nums
 	}
+
+	//fmt.Fprintln(out, len(input))
+	//
+	//fmt.Fprintln(out, "=====")
+
+	/*	for i, m := range input {
+		fmt.Fprintln(out, "id", i)
+
+		for j := range m {
+			fmt.Fprint(out, j, " ")
+		}
+		fmt.Fprintln(out)
+	}*/
+
+	solve(input, out)
+}
+
+func solve(input []map[int]struct{}, out *bufio.Writer) {
+	n := len(input)
 
 	subordinates := make(map[int]Node)
 	leaders := make(map[int]Node)
@@ -65,7 +84,12 @@ func runCase(in *bufio.Reader, out *bufio.Writer) {
 		return
 	}
 
-	for funcName(input, subordinates, leaders) {
+	originalLen := make([]int, len(input))
+	for i, m := range input {
+		originalLen[i] = len(m)
+	}
+
+	for generateSubordinates(input, subordinates, leaders, originalLen) {
 
 	}
 
@@ -98,11 +122,14 @@ func runCase(in *bufio.Reader, out *bufio.Writer) {
 
 	fmt.Fprintln(out, "YES")
 	head.Print(out)
-	//fmt.Fprintln(out)
 }
 
-func funcName(input []map[int]struct{}, subordinates map[int]Node, leaders map[int]Node) bool {
-	for lnn, line := range input {
+func generateSubordinates(input []map[int]struct{},
+	subordinates map[int]Node,
+	leaders map[int]Node,
+	originalLen []int,
+) bool {
+	for i, line := range input {
 		if len(line) == 0 {
 			continue
 		}
@@ -112,7 +139,7 @@ func funcName(input []map[int]struct{}, subordinates map[int]Node, leaders map[i
 			line2[key] = value
 		}
 
-		// удаляем подчиненных
+		// удаляем подчиненных из копии
 		for staffID := range line {
 			for subID := range subordinates {
 				if subID == staffID {
@@ -131,6 +158,8 @@ func funcName(input []map[int]struct{}, subordinates map[int]Node, leaders map[i
 			leadID = id
 		}
 
+		leadNode := leaders[leadID]
+
 		for staffID := range line {
 			if staffID == leadID {
 				continue
@@ -138,29 +167,23 @@ func funcName(input []map[int]struct{}, subordinates map[int]Node, leaders map[i
 
 			// подчиненный
 			nd := subordinates[staffID]
-			leadNode := leaders[leadID]
 			leadNode.child = append(leadNode.child, &nd)
-			leaders[leadID] = leadNode
 
 			nd.parent = &leadNode
 
 			subordinates[staffID] = nd
-			delete(line, staffID)
-
-			deleteSubFromList(input, staffID)
-
 			subordinates[leadID] = leadNode
 
-			t := leadNode.LenChain()
-			t++
-			if t != len(line2) {
-				return false
-			}
+			deleteSubFromList(input, staffID)
+		}
+
+		if leadNode.LenChain()+1 != originalLen[i] {
+			return false
 		}
 
 		delete(leaders, leadID)
 
-		input[lnn] = map[int]struct{}{}
+		input[i] = map[int]struct{}{}
 
 		return true
 	}
@@ -204,4 +227,17 @@ func (n *Node) LenChain() int {
 	t += len(n.child)
 
 	return t
+}
+
+func Readln(r *bufio.Reader) (string, error) {
+	var (
+		isPrefix bool  = true
+		err      error = nil
+		line, ln []byte
+	)
+	for isPrefix && err == nil {
+		line, isPrefix, err = r.ReadLine()
+		ln = append(ln, line...)
+	}
+	return string(ln), err
 }
