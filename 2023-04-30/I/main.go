@@ -152,6 +152,10 @@ func generateSubordinates(input []map[int]struct{},
 			continue
 		}
 
+		if len(line2) == 0 {
+			return false
+		}
+
 		// в списке остался только руководитель
 		leadID := 0
 		for id := range line2 {
